@@ -1,7 +1,178 @@
 # Lab18Web
 
-## Langkah-langkah Praktikum
-*Persiapan*
+## **Praktikum 5: Upload File Gambar**
+### *Langkah-langkah Praktikum*
+Upload Gambar pada Artikel
+Menambahkan fungsi unggah gambar pada tambah artikel.
+Buka kembali **Controller Artikel** pada project sebelumnya, sesuaikan kode pada method
+**add** seperti berikut:
+```php
+public function add()
+{
+    // validasi data.
+    $validation = \Config\Services::validation();
+    $validation->setRules(['judul' => 'required']);
+    $isDataValid = $validation->withRequest($this->request)->run();
+
+    if ($isDataValid)
+    {
+        $file = $this->request->getFile('gambar');
+        $file->move(ROOTPATH . 'public/gambar');
+
+        $artikel = new ArtikelModel();
+        $artikel->insert([
+        'judul' => $this->request->getPost('judul'),
+            'isi' => $this->request->getPost('isi'),
+            'slug' => url_title($this->request->getPost('judul')),
+            'gambar' => $file->getName(),
+        ]);
+        return redirect('admin/artikel');
+    }
+    $title = "Tambah Artikel";
+    return view('artikel/form_add', compact('title'));
+}
+```
+
+Kemudian pada file **views/artikel/form_add.php** tambahkan field input file seperti
+berikut.
+```php
+<p>
+<input type="file" name="gambar">
+</p>
+```
+
+Dan sesuaikan tag form dengan menambahkan ecrypt type seperti berikut.
+```php
+<form action="" method="post" enctype="multipart/form-data">
+```
+
+Ujicoba file upload dengan mengakses menu tambah artikel.
+![ss8](https://github.com/ZahraNurhaliza/Lab18Web/assets/115614417/e259ecac-60ff-4263-ae01-861115c52b8a)
+
+
+
+## **Praktikum 6: AJAX**
+### *Langkah-langkah Praktikum*
+Membuat AJAX Controller
+```php
+<?php
+namespace App\Controllers;
+use CodeIgniter\Controller;
+use CodeIgniter\HTTP\Request;
+use CodeIgniter\HTTP\Response;
+use App\Models\ArtikelModel;
+class AjaxController extends Controller
+{
+    public function index()
+    {
+        return view('ajax/index');
+    }
+    public function getData()
+    {
+        $model = new ArtikelModel();
+        $data = $model->findAll();
+        // Kirim data dalam format JSON
+        return $this->response->setJSON($data);
+    }
+    public function delete($id)
+    {
+        $model = new ArtikelModel();
+        $data = $model->delete($id);
+        $data = [
+            'status' => 'OK'
+        ];
+        // Kirim data dalam format JSON
+        return $this->response->setJSON($data);
+    }
+}
+```
+Membuat View
+```php
+<?= $this->include('template/header'); ?>
+<h1>Data Artikel</h1>
+<table class="table-data" id="artikelTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Judul</th>
+            <th>Status</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+<script src="<?= base_url('assets/js/jquery-3.6.0.min.js') ?>"></script>
+<script>
+    $(document).ready(function() {
+    // Function to display a loading message while data is fetched
+    function showLoadingMessage() {
+    $('#artikelTable tbody').html('<tr><td colspan="4">Loading
+data...</td></tr>');
+    }
+    // Buat fungsi load data
+    function loadData() {
+        showLoadingMessage(); // Display loading message initially
+        
+        // Lakukan request AJAX ke URL getData
+        $.ajax({
+            url: "<?= base_url('ajax/getData') ?>",
+            method: "GET",
+            dataType: "json",
+            success: function(data) {
+                // Tampilkan data yang diterima dari server
+                var tableBody = "";
+                for (var i = 0; i < data.length; i++) {
+                    var row = data[i];
+                    tableBody += '<tr>';
+                    tableBody += '<td>' + row.id + '</td>';
+                    tableBody += '<td>' + row.judul + '</td>';
+                    // Add a placeholder for the "Status" column (modify as needed)
+                    tableBody += '<td><span class="status">---</span></td>';
+                    tableBody += '<td>';
+                    // Replace with your desired actions (e.g., edit,delete)
+                    tableBody += '<a href="<?= base_url('artikel/edit/')
+?>' + row.id + '" class="btn btn-primary">Edit</a>';
+                    tableBody += ' <a href="#" class="btn btn-danger 
+btn-delete" data-id="' + row.id + '">Delete</a>';
+                    tableBody += '</td>';
+                    tableBody += '</tr>';
+                }
+                $('#artikelTable tbody').html(tableBody);
+            }
+        });
+    }
+    loadData();
+    // Implement actions for buttons (e.g., delete confirmation)
+    $(document).on('click', '.btn-delete', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        // Add confirmation dialog or handle deletion logic here
+
+        // hapus data;
+        if (confirm('Apakah Anda yakin ingin menghapus artikel ini?'))
+{
+            $.ajax({
+                url: "<?= base_url('artikel/delete/') ?>" + id,
+                method: "DELETE",
+                success: function(data) {
+                    loadData(); // Reload Datatables to reflect changes
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    alert('Error deleting article: ' + textStatus + errorThrown);
+                }
+            });
+        }
+        console.log('Delete button clicked for ID:', id);
+    });
+});
+</script>
+
+<?= $this->include('template/footer'); ?>    
+```
+
+
+## **Praktikum 7: API**
+### *Langkah-langkah Praktikum*
 Periapan awal adalah mengunduh aplikasi REST Client, ada banyak aplikasi yang dapat digunakan untuk
 keperluan tersebut. Salah satunya adalah Postman. `Postman` – Merupakan aplikasi yang berfungsi
 sebagai REST Client, digunakan untuk testing REST API. Unduh apliasi Postman dari tautan berikut:
